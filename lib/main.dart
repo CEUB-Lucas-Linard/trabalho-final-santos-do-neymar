@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/date_symbol_data_local.dart'; // Added for initializeDateFormatting
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
-  // Ensure locale data is initialized for pt_BR
+  // Inicializa a formatação de data para pt_BR
   await initializeDateFormatting('pt_BR', null);
+
+  // Inicializa as notificações locais
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('app_icon');
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -95,8 +106,11 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
   String _selectedCategory = 'Reunião';
   late TabController _tabController;
   final List<String> _categories = ['Reunião', 'Pessoal', 'Trabalho', 'Viagem', 'Outro'];
-
   bool _showAddOptions = false;
+
+  // Instância do plugin de notificações
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -105,6 +119,17 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     _endDate = DateTime.now().add(const Duration(hours: 2));
     _tabController = TabController(length: 2, vsync: this);
     _loadEvents();
+    _initializeNotifications();
+  }
+
+  // Inicializa as configurações de notificação
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('app_icon');
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void _loadEvents() {
@@ -155,9 +180,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     setState(() {
       _events = events;
     });
-
-    // Sugestão: Carregar eventos de um banco de dados local
-    // Exemplo: _events = Hive.box('events').getAll();
   }
 
   List<Event> _getEventsForDay(DateTime day) {
@@ -1147,6 +1169,31 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     );
   }
 
+  // Método para agendar notificação
+  Future<void> _scheduleNotification(Event event) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails(
+      'event_reminder_channel',
+      'Event Reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+    );
+    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    final scheduledTime = event.startTime.subtract(const Duration(minutes: 15));
+    if (scheduledTime.isAfter(DateTime.now())) {
+      await flutterLocalNotificationsPlugin.schedule(
+        event.hashCode, // ID único baseado no hash do evento
+        'Lembrete: ${event.title}',
+        'O evento começa às ${DateFormat('HH:mm', 'pt_BR').format(event.startTime)}',
+        scheduledTime,
+        platformChannelSpecifics,
+      );
+    }
+  }
+
   void _saveEvent() {
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1183,8 +1230,8 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       _selectedDay = normalizedDay;
     });
 
-    // Sugestão: Persistir eventos em um banco de dados local
-    // Exemplo: Hive.box('events').put(normalizedDay.toString(), _events[normalizedDay]);
+    // Agendar notificação para o novo evento
+    _scheduleNotification(newEvent);
   }
 
   void _showEventDetails(Event event) {
