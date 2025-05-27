@@ -11,9 +11,9 @@ void main() async {
 
   // Inicializa as notificações locais
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
   const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('app_icon');
+      AndroidInitializationSettings('app_icon');
   final InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
@@ -105,12 +105,12 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
   late DateTime _endDate;
   String _selectedCategory = 'Reunião';
   late TabController _tabController;
-  final List<String> _categories = ['Reunião', 'Pessoal', 'Trabalho', 'Viagem', 'Outro'];
+  final List<String> _categories = ['Reunião', 'Pessoal', 'Trabalho', 'Viagem', 'Aniversário', 'Outro'];
   bool _showAddOptions = false;
 
   // Instância do plugin de notificações
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -125,7 +125,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
   // Inicializa as configurações de notificação
   Future<void> _initializeNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
-    AndroidInitializationSettings('app_icon');
+        AndroidInitializationSettings('app_icon');
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
     );
@@ -169,13 +169,26 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       participants: [],
     );
 
+    final sampleEvent4 = Event(
+      title: 'Aniversário de Maria',
+      description: 'Festa de aniversário',
+      startTime: DateTime(now.year, now.month, now.day + 3, 18, 0),
+      endTime: DateTime(now.year, now.month, now.day + 3, 22, 0),
+      backgroundColor: const Color(0xFFFF2D55),
+      location: 'Casa de Maria',
+      category: 'Aniversário',
+      participants: ['João', 'Ana', 'Carlos'],
+    );
+
     final day1 = DateTime(now.year, now.month, now.day);
     final day2 = DateTime(now.year, now.month, now.day + 2);
     final day3 = DateTime(now.year, now.month, now.day - 1);
+    final day4 = DateTime(now.year, now.month, now.day + 3);
 
     events[day1] = [sampleEvent1];
     events[day2] = [sampleEvent2];
     events[day3] = [sampleEvent3];
+    events[day4] = [sampleEvent4];
 
     setState(() {
       _events = events;
@@ -197,8 +210,27 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
         return const Color(0xFFFF7D54);
       case 'Viagem':
         return const Color(0xFFFFBE0B);
+      case 'Aniversário':
+        return const Color(0xFFFF2D55);
       default:
         return const Color(0xFF6C63FF);
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Reunião':
+        return Icons.groups;
+      case 'Pessoal':
+        return Icons.person;
+      case 'Trabalho':
+        return Icons.work;
+      case 'Viagem':
+        return Icons.flight;
+      case 'Aniversário':
+        return Icons.cake;
+      default:
+        return Icons.event;
     }
   }
 
@@ -570,21 +602,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     );
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Reunião':
-        return Icons.groups;
-      case 'Pessoal':
-        return Icons.person;
-      case 'Trabalho':
-        return Icons.work;
-      case 'Viagem':
-        return Icons.flight;
-      default:
-        return Icons.event;
-    }
-  }
-
   Widget _buildCustomAddButton() {
     return Positioned(
       right: 24,
@@ -599,49 +616,62 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
             },
             child: _showAddOptions
                 ? Column(
-              key: const ValueKey('options'),
-              children: [
-                _buildAddOptionButton(
-                  icon: Icons.work,
-                  color: const Color(0xFFFF7D54),
-                  label: 'Trabalho',
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = 'Trabalho';
-                      _showAddOptions = false;
-                    });
-                    _showAddEventDialog();
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildAddOptionButton(
-                  icon: Icons.person,
-                  color: const Color(0xFF4ECDC4),
-                  label: 'Pessoal',
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = 'Pessoal';
-                      _showAddOptions = false;
-                    });
-                    _showAddEventDialog();
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildAddOptionButton(
-                  icon: Icons.groups,
-                  color: const Color(0xFF6C63FF),
-                  label: 'Reunião',
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = 'Reunião';
-                      _showAddOptions = false;
-                    });
-                    _showAddEventDialog();
-                  },
-                ),
-                const SizedBox(height: 12),
-              ],
-            )
+                    key: const ValueKey('options'),
+                    children: [
+                      _buildAddOptionButton(
+                        icon: Icons.work,
+                        color: const Color(0xFFFF7D54),
+                        label: 'Trabalho',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Trabalho';
+                            _showAddOptions = false;
+                          });
+                          _showAddEventDialog();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAddOptionButton(
+                        icon: Icons.person,
+                        color: const Color(0xFF4ECDC4),
+                        label: 'Pessoal',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Pessoal';
+                            _showAddOptions = false;
+                          });
+                          _showAddEventDialog();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAddOptionButton(
+                        icon: Icons.groups,
+                        color: const Color(0xFF6C63FF),
+                        label: 'Reunião',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Reunião';
+                            _showAddOptions = false;
+                          });
+                          _showAddEventDialog();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAddOptionButton(
+                        icon: Icons.cake,
+                        color: const Color(0xFFFF2D55),
+                        label: 'Aniversário',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Aniversário';
+                            _showAddOptions = false;
+                          });
+                          _showAddEventDialog();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  )
                 : const SizedBox.shrink(),
           ),
           GestureDetector(
@@ -1172,7 +1202,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
   // Método para agendar notificação
   Future<void> _scheduleNotification(Event event) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
-    AndroidNotificationDetails(
+        AndroidNotificationDetails(
       'event_reminder_channel',
       'Event Reminders',
       importance: Importance.max,
@@ -1180,7 +1210,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       showWhen: false,
     );
     const NotificationDetails platformChannelSpecifics =
-    NotificationDetails(android: androidPlatformChannelSpecifics);
+        NotificationDetails(android: androidPlatformChannelSpecifics);
 
     final scheduledTime = event.startTime.subtract(const Duration(minutes: 15));
     if (scheduledTime.isAfter(DateTime.now())) {
@@ -1516,7 +1546,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     setState(() {
       _events.forEach((day, events) {
         events.removeWhere((event) =>
-        event.title == eventToDelete.title &&
+            event.title == eventToDelete.title &&
             event.startTime == eventToDelete.startTime);
 
         if (events.isEmpty) {
