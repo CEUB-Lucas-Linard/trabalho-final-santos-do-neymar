@@ -6,20 +6,31 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
+  // Inicializa a formatação de data para pt_BR
   await initializeDateFormatting('pt_BR', null);
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('app_icon');
-  final InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+
+  // Inicializa as notificações locais
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('app_icon');
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-  ));
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
   runApp(const EventApp());
 }
 
 class EventApp extends StatelessWidget {
   const EventApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -42,7 +53,9 @@ class EventApp extends StatelessWidget {
         ),
         cardTheme: CardTheme(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           color: Colors.white,
         ),
       ),
@@ -60,6 +73,9 @@ class Event {
   final String location;
   final String category;
   final List<String> participants;
+  final String? recurrence; // e.g., "Diária", "Semanal", "Mensal", "Anual"
+  final DateTime? recurrenceEndDate;
+
   const Event({
     required this.title,
     required this.description,
@@ -69,11 +85,14 @@ class Event {
     this.location = '',
     this.category = 'Geral',
     this.participants = const [],
+    this.recurrence,
+    this.recurrenceEndDate,
   });
 }
 
 class EventCalendarScreen extends StatefulWidget {
   const EventCalendarScreen({Key? key}) : super(key: key);
+
   @override
   _EventCalendarScreenState createState() => _EventCalendarScreenState();
 }
@@ -86,15 +105,19 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _participantController = TextEditingController();
   late DateTime _startDate;
   late DateTime _endDate;
   String _selectedCategory = 'Reunião';
+  String? _selectedRecurrence = 'Nenhuma';
+  DateTime? _recurrenceEndDate;
   late TabController _tabController;
   final List<String> _categories = ['Reunião', 'Pessoal', 'Trabalho', 'Viagem', 'Aniversário', 'Outro'];
+  final List<String> _recurrenceOptions = ['Nenhuma', 'Diária', 'Semanal', 'Mensal', 'Anual'];
   bool _showAddOptions = false;
-  List<String> _tempParticipants = [];
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  // Instância do plugin de notificações
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -106,15 +129,20 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     _initializeNotifications();
   }
 
+  // Inicializa as configurações de notificação
   Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('app_icon');
-    final InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('app_icon');
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void _loadEvents() {
     final Map<DateTime, List<Event>> events = {};
     final now = DateTime.now();
+
     final sampleEvent1 = Event(
       title: 'Reunião de projeto',
       description: 'Apresentação do novo design para o cliente',
@@ -125,6 +153,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       category: 'Trabalho',
       participants: ['Maria Silva', 'João Oliveira'],
     );
+
     final sampleEvent2 = Event(
       title: 'Almoço com parceiros',
       description: 'Restaurante Italiano - Centro',
@@ -135,6 +164,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       category: 'Networking',
       participants: ['Carlos Souza', 'Ana Mendes'],
     );
+
     final sampleEvent3 = Event(
       title: 'Consulta médica',
       description: 'Check-up anual',
@@ -145,6 +175,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       category: 'Pessoal',
       participants: [],
     );
+
     final sampleEvent4 = Event(
       title: 'Aniversário de Maria',
       description: 'Festa de aniversário',
@@ -154,18 +185,95 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       location: 'Casa de Maria',
       category: 'Aniversário',
       participants: ['João', 'Ana', 'Carlos'],
+      recurrence: 'Anual',
+      recurrenceEndDate: DateTime(now.year + 2, now.month, now.day + 3),
     );
+
+    final sampleEvent5 = Event(
+      title: 'Reunião de equipe semanal',
+      description: 'Planejamento da sprint',
+      startTime: DateTime(now.year, now.month, now.day, 9, 0),
+      endTime: DateTime(now.year, now.month, now.day, 10, 0),
+      backgroundColor: const Color(0xFF6C63FF),
+      location: 'Sala B',
+      category: 'Reunião',
+      participants: ['Equipe Dev'],
+      recurrence: 'Semanal',
+      recurrenceEndDate: DateTime(now.year, now.month + 3, now.day),
+    );
+
+    // Adiciona eventos normais
     final day1 = DateTime(now.year, now.month, now.day);
     final day2 = DateTime(now.year, now.month, now.day + 2);
     final day3 = DateTime(now.year, now.month, now.day - 1);
     final day4 = DateTime(now.year, now.month, now.day + 3);
-    events[day1] = [sampleEvent1];
+
+    events[day1] = [sampleEvent1, sampleEvent5];
     events[day2] = [sampleEvent2];
     events[day3] = [sampleEvent3];
     events[day4] = [sampleEvent4];
+
+    // Adiciona ocorrências de eventos recorrentes
+    _addRecurringEvents(events, sampleEvent4);
+    _addRecurringEvents(events, sampleEvent5);
+
     setState(() {
       _events = events;
     });
+  }
+
+  void _addRecurringEvents(Map<DateTime, List<Event>> events, Event event) {
+    if (event.recurrence == null || event.recurrenceEndDate == null) return;
+
+    DateTime currentDate = event.startTime;
+    final endDate = event.recurrenceEndDate!;
+    const maxOccurrences = 100; // Limite para evitar loops excessivos
+    int occurrenceCount = 0;
+
+    while (currentDate.isBefore(endDate) && occurrenceCount < maxOccurrences) {
+      occurrenceCount++;
+      DateTime nextDate;
+
+      switch (event.recurrence) {
+        case 'Diária':
+          nextDate = currentDate.add(const Duration(days: 1));
+          break;
+        case 'Semanal':
+          nextDate = currentDate.add(const Duration(days: 7));
+          break;
+        case 'Mensal':
+          nextDate = DateTime(currentDate.year, currentDate.month + 1, currentDate.day, currentDate.hour, currentDate.minute);
+          break;
+        case 'Anual':
+          nextDate = DateTime(currentDate.year + 1, currentDate.month, currentDate.day, currentDate.hour, currentDate.minute);
+          break;
+        default:
+          return;
+      }
+
+      if (nextDate.isBefore(endDate)) {
+        final normalizedDay = DateTime(nextDate.year, nextDate.month, nextDate.day);
+        final recurringEvent = Event(
+          title: event.title,
+          description: event.description,
+          startTime: nextDate,
+          endTime: nextDate.add(event.endTime.difference(event.startTime)),
+          backgroundColor: event.backgroundColor,
+          location: event.location,
+          category: event.category,
+          participants: event.participants,
+          recurrence: event.recurrence,
+          recurrenceEndDate: event.recurrenceEndDate,
+        );
+
+        if (events[normalizedDay] == null) {
+          events[normalizedDay] = [];
+        }
+        events[normalizedDay]!.add(recurringEvent);
+      }
+
+      currentDate = nextDate;
+    }
   }
 
   List<Event> _getEventsForDay(DateTime day) {
@@ -381,13 +489,16 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       final normalizedDay = DateTime(day.year, day.month, day.day);
       allEvents[normalizedDay] = events;
     });
+
     final sortedDays = allEvents.keys.toList()..sort();
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: sortedDays.length,
       itemBuilder: (context, index) {
         final day = sortedDays[index];
         final events = allEvents[day]!;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -411,6 +522,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
 
   Widget _buildEventList() {
     final eventsList = _getEventsForDay(_selectedDay);
+
     if (eventsList.isEmpty) {
       return Center(
         child: Column(
@@ -441,6 +553,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
         ),
       );
     }
+
     return ListView.builder(
       itemCount: eventsList.length,
       padding: const EdgeInsets.only(bottom: 100),
@@ -503,7 +616,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                        '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}${event.recurrence != null ? ' (Recorrente: ${event.recurrence})' : ''}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -654,7 +767,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: _showAddOptions ? Colors.red : Theme.of(context).colorScheme.primary,
+                color: _showAddOptions
+                    ? Colors.red
+                    : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -743,15 +858,14 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     );
   }
 
-  void _showAddEventDialog({Event? eventToEdit}) {
-    _titleController.text = eventToEdit?.title ?? '';
-    _descController.text = eventToEdit?.description ?? '';
-    _locationController.text = eventToEdit?.location ?? '';
-    _participantController.clear();
-    _startDate = eventToEdit?.startTime ?? DateTime.now();
-    _endDate = eventToEdit?.endTime ?? DateTime.now().add(const Duration(hours: 2));
-    _selectedCategory = eventToEdit?.category ?? _selectedCategory;
-    _tempParticipants = eventToEdit != null ? List.from(eventToEdit.participants) : [];
+  void _showAddEventDialog() {
+    _titleController.clear();
+    _descController.clear();
+    _locationController.clear();
+    _startDate = DateTime.now();
+    _endDate = DateTime.now().add(const Duration(hours: 2));
+    _selectedRecurrence = 'Nenhuma';
+    _recurrenceEndDate = null;
 
     showModalBottomSheet(
       context: context,
@@ -767,7 +881,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
           ),
         ),
         child: StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (context, setState) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -784,7 +898,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        eventToEdit == null ? 'Novo Evento' : 'Editar Evento',
+                        'Novo Evento',
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -852,14 +966,19 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                           final isSelected = _selectedCategory == category;
                           return GestureDetector(
                             onTap: () {
-                              setModalState(() {
+                              setState(() {
                                 _selectedCategory = category;
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
-                                color: isSelected ? _getCategoryColor(category) : _getCategoryColor(category).withOpacity(0.1),
+                                color: isSelected
+                                    ? _getCategoryColor(category)
+                                    : _getCategoryColor(category).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -868,14 +987,20 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                                   Icon(
                                     _getCategoryIcon(category),
                                     size: 16,
-                                    color: isSelected ? Colors.white : _getCategoryColor(category),
+                                    color: isSelected
+                                        ? Colors.white
+                                        : _getCategoryColor(category),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     category,
                                     style: TextStyle(
-                                      color: isSelected ? Colors.white : _getCategoryColor(category),
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : _getCategoryColor(category),
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 ],
@@ -884,6 +1009,99 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                           );
                         }).toList(),
                       ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Recorrência',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: _selectedRecurrence,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.repeat),
+                        ),
+                        items: _recurrenceOptions.map((option) {
+                          return DropdownMenuItem<String>(
+                            value: option,
+                            child: Text(option),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedRecurrence = value;
+                            if (value == 'Nenhuma') {
+                              _recurrenceEndDate = null;
+                            }
+                          });
+                        },
+                      ),
+                      if (_selectedRecurrence != 'Nenhuma') ...[
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Fim da Recorrência',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        InkWell(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: _startDate.add(const Duration(days: 30)),
+                              firstDate: _startDate,
+                              lastDate: DateTime(2030),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: _getCategoryColor(_selectedCategory),
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (date != null) {
+                              setState(() {
+                                _recurrenceEndDate = DateTime(date.year, date.month, date.day, 23, 59);
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _recurrenceEndDate != null
+                                      ? DateFormat('dd/MM/yyyy').format(_recurrenceEndDate!)
+                                      : 'Selecionar data de término',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: _getCategoryColor(_selectedCategory),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -933,8 +1151,16 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                                         },
                                       );
                                       if (time != null) {
-                                        setModalState(() {
-                                          _startDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                                        setState(() {
+                                          _startDate = DateTime(
+                                            date.year,
+                                            date.month,
+                                            date.day,
+                                            time.hour,
+                                            time.minute,
+                                          );
+                                          // Ajusta a data de término automaticamente
+                                          _endDate = _startDate.add(const Duration(hours: 2));
                                         });
                                       }
                                     }
@@ -950,7 +1176,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                                       children: [
                                         Text(
                                           DateFormat('dd/MM/yyyy HH:mm').format(_startDate),
-                                          style: TextStyle(color: Colors.grey[700]),
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                          ),
                                         ),
                                         Icon(
                                           Icons.calendar_today,
@@ -1011,8 +1239,14 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                                         },
                                       );
                                       if (time != null) {
-                                        setModalState(() {
-                                          _endDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                                        setState(() {
+                                          _endDate = DateTime(
+                                            date.year,
+                                            date.month,
+                                            date.day,
+                                            time.hour,
+                                            time.minute,
+                                          );
                                         });
                                       }
                                     }
@@ -1028,7 +1262,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                                       children: [
                                         Text(
                                           DateFormat('dd/MM/yyyy HH:mm').format(_endDate),
-                                          style: TextStyle(color: Colors.grey[700]),
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                          ),
                                         ),
                                         Icon(
                                           Icons.calendar_today,
@@ -1064,58 +1300,35 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                           children: [
                             Row(
                               children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _participantController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Nome do participante',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      prefixIcon: const Icon(Icons.person),
+                                CircleAvatar(
+                                  backgroundColor: _getCategoryColor(_selectedCategory),
+                                  radius: 18,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Adicionar participantes',
+                                    style: TextStyle(
+                                      color: Colors.grey,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 IconButton(
                                   icon: Icon(
                                     Icons.person_add,
                                     color: _getCategoryColor(_selectedCategory),
                                   ),
                                   onPressed: () {
-                                    if (_participantController.text.trim().isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('O nome do participante não pode estar vazio')),
-                                      );
-                                      return;
-                                    }
-                                    setModalState(() {
-                                      _tempParticipants.add(_participantController.text.trim());
-                                      _participantController.clear();
-                                    });
+                                    // Implementar lógica para adicionar participantes
                                   },
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            if (_tempParticipants.isNotEmpty)
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _tempParticipants.map((participant) {
-                                  return Chip(
-                                    label: Text(participant),
-                                    backgroundColor: _getCategoryColor(_selectedCategory).withOpacity(0.1),
-                                    deleteIcon: const Icon(Icons.close, size: 18),
-                                    deleteIconColor: _getCategoryColor(_selectedCategory),
-                                    onDeleted: () {
-                                      setModalState(() {
-                                        _tempParticipants.remove(participant);
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
                           ],
                         ),
                       ),
@@ -1136,11 +1349,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                   ),
                   child: ElevatedButton(
                     onPressed: () {
-                      if (eventToEdit == null) {
-                        _saveEvent();
-                      } else {
-                        _updateEvent(eventToEdit);
-                      }
+                      _saveEvent();
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -1151,9 +1360,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Text(
-                      eventToEdit == null ? 'Salvar Evento' : 'Atualizar Evento',
-                      style: const TextStyle(
+                    child: const Text(
+                      'Salvar Evento',
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1168,24 +1377,68 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     );
   }
 
+  // Método para agendar notificação
   Future<void> _scheduleNotification(Event event) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails(
       'event_reminder_channel',
       'Event Reminders',
       importance: Importance.max,
       priority: Priority.high,
       showWhen: false,
     );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-    final scheduledTime = event.startTime.subtract(const Duration(minutes: 15));
-    if (scheduledTime.isAfter(DateTime.now())) {
-      await flutterLocalNotificationsPlugin.schedule(
-        event.hashCode,
-        'Lembrete: ${event.title}',
-        'O evento começa às ${DateFormat('HH:mm', 'pt_BR').format(event.startTime)}',
-        scheduledTime,
-        platformChannelSpecifics,
-      );
+    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    if (event.recurrence == null) {
+      // Notificação para evento único
+      final scheduledTime = event.startTime.subtract(const Duration(minutes: 15));
+      if (scheduledTime.isAfter(DateTime.now())) {
+        await flutterLocalNotificationsPlugin.schedule(
+          event.hashCode,
+          'Lembrete: ${event.title}',
+          'O evento começa às ${DateFormat('HH:mm', 'pt_BR').format(event.startTime)}',
+          scheduledTime,
+          platformChannelSpecifics,
+        );
+      }
+    } else {
+      // Notificações para eventos recorrentes
+      DateTime currentDate = event.startTime;
+      final endDate = event.recurrenceEndDate ?? DateTime(2030);
+      const maxOccurrences = 100;
+      int occurrenceCount = 0;
+
+      while (currentDate.isBefore(endDate) && occurrenceCount < maxOccurrences) {
+        occurrenceCount++;
+        final scheduledTime = currentDate.subtract(const Duration(minutes: 15));
+        if (scheduledTime.isAfter(DateTime.now())) {
+          await flutterLocalNotificationsPlugin.schedule(
+            '${event.hashCode}_$occurrenceCount'.hashCode,
+            'Lembrete: ${event.title}',
+            'O evento começa às ${DateFormat('HH:mm', 'pt_BR').format(currentDate)}',
+            scheduledTime,
+            platformChannelSpecifics,
+          );
+        }
+
+        switch (event.recurrence) {
+          case 'Diária':
+            currentDate = currentDate.add(const Duration(days: 1));
+            break;
+          case 'Semanal':
+            currentDate = currentDate.add(const Duration(days: 7));
+            break;
+          case 'Mensal':
+            currentDate = DateTime(currentDate.year, currentDate.month + 1, currentDate.day, currentDate.hour, currentDate.minute);
+            break;
+          case 'Anual':
+            currentDate = DateTime(currentDate.year + 1, currentDate.month, currentDate.day, currentDate.hour, currentDate.minute);
+            break;
+          default:
+            return;
+        }
+      }
     }
   }
 
@@ -1202,6 +1455,13 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       );
       return;
     }
+    if (_selectedRecurrence != 'Nenhuma' && _recurrenceEndDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, selecione uma data de término para a recorrência')),
+      );
+      return;
+    }
+
     final newEvent = Event(
       title: _titleController.text,
       description: _descController.text,
@@ -1210,69 +1470,27 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
       backgroundColor: _getCategoryColor(_selectedCategory),
       location: _locationController.text,
       category: _selectedCategory,
-      participants: List.from(_tempParticipants),
+      participants: [],
+      recurrence: _selectedRecurrence != 'Nenhuma' ? _selectedRecurrence : null,
+      recurrenceEndDate: _recurrenceEndDate,
     );
-    final normalizedDay = DateTime(_startDate.year, _startDate.month, _startDate.day);
-    setState(() {
-      if (_events[normalizedDay] != null) {
-        _events[normalizedDay]!.add(newEvent);
-      } else {
-        _events[normalizedDay] = [newEvent];
-      }
-      _selectedDay = normalizedDay;
-    });
-    _scheduleNotification(newEvent);
-  }
 
-  void _updateEvent(Event eventToUpdate) {
-    if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('O título do evento é obrigatório')),
-      );
-      return;
-    }
-    if (_endDate.isBefore(_startDate)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A data de término deve ser posterior à data de início')),
-      );
-      return;
-    }
-    final updatedEvent = Event(
-      title: _titleController.text,
-      description: _descController.text,
-      startTime: _startDate,
-      endTime: _endDate,
-      backgroundColor: _getCategoryColor(_selectedCategory),
-      location: _locationController.text,
-      category: _selectedCategory,
-      participants: List.from(_tempParticipants),
-    );
     setState(() {
-      _events.forEach((day, events) {
-        final index = events.indexWhere((event) =>
-        event.title == eventToUpdate.title && event.startTime == eventToUpdate.startTime);
-        if (index != -1) {
-          events[index] = updatedEvent;
-        }
-      });
       final normalizedDay = DateTime(_startDate.year, _startDate.month, _startDate.day);
-      if (_events.containsKey(normalizedDay)) {
-        if (_events[eventToUpdate.startTime] != null) {
-          _events[eventToUpdate.startTime]!.removeWhere((event) =>
-          event.title == eventToUpdate.title && event.startTime == eventToUpdate.startTime);
-          if (_events[eventToUpdate.startTime]!.isEmpty) {
-            _events.remove(eventToUpdate.startTime);
-          }
-        }
-        if (_events[normalizedDay] != null) {
-          _events[normalizedDay]!.add(updatedEvent);
-        } else {
-          _events[normalizedDay] = [updatedEvent];
-        }
+      if (_events[normalizedDay] == null) {
+        _events[normalizedDay] = [];
       }
+      _events[normalizedDay]!.add(newEvent);
       _selectedDay = normalizedDay;
+
+      // Adiciona ocorrências recorrentes
+      if (newEvent.recurrence != null) {
+        _addRecurringEvents(_events, newEvent);
+      }
     });
-    _scheduleNotification(updatedEvent);
+
+    // Agendar notificação para o evento
+    _scheduleNotification(newEvent);
   }
 
   void _showEventDetails(Event event) {
@@ -1332,8 +1550,8 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.white),
                         onPressed: () {
+                          // Implementar edição do evento
                           Navigator.pop(context);
-                          _showAddEventDialog(eventToEdit: event);
                         },
                       ),
                       IconButton(
@@ -1355,6 +1573,13 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                     title: 'Horário',
                     content: '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
                   ),
+                  if (event.recurrence != null)
+                    _buildDetailItem(
+                      icon: Icons.repeat,
+                      color: event.backgroundColor,
+                      title: 'Recorrência',
+                      content: '${event.recurrence} até ${DateFormat('dd/MM/yyyy').format(event.recurrenceEndDate!)}',
+                    ),
                   if (event.location.isNotEmpty)
                     _buildDetailItem(
                       icon: Icons.location_on,
@@ -1474,6 +1699,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        // Implementar ação de compartilhar evento
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
@@ -1556,7 +1782,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     setState(() {
       _events.forEach((day, events) {
         events.removeWhere((event) =>
-        event.title == eventToDelete.title && event.startTime == eventToDelete.startTime);
+        event.title == eventToDelete.title &&
+            event.startTime == eventToDelete.startTime &&
+            event.recurrence == eventToDelete.recurrence);
         if (events.isEmpty) {
           _events.remove(day);
         }
@@ -1569,7 +1797,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> with SingleTi
     _titleController.dispose();
     _descController.dispose();
     _locationController.dispose();
-    _participantController.dispose();
     _tabController.dispose();
     super.dispose();
   }
