@@ -96,7 +96,7 @@ Além dos requisitos, implementamos:
 
 ### Instalação
 ```bash
-git clone <repositório>
-cd eventapp
+git clone https://github.com/CEUB-Lucas-Linard/trabalho-final-santos-do-neymar.git
+cd trabalho-final-santos-do-neymar
 flutter pub get
 flutter run
