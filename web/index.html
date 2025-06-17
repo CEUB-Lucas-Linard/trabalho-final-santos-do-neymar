@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event App</title>
+  <link rel="manifest" href="/manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/flutter_service_worker.js')
+          .then(registration => {
+            console.log('Service Worker registrado com sucesso:', registration);
+            // Forçar atualização do service worker
+            registration.update();
+          })
+          .catch(error => {
+            console.error('Falha ao registrar Service Worker:', error);
+          });
+      });
+    }
+    function requestNotificationPermission() {
+      if (Notification.permission !== 'granted') {
+        Notification.requestPermission().then(permission => {
+          console.log('Permissão para notificações:', permission);
+          if (permission !== 'granted') {
+            alert('Por favor, permita notificações para receber lembretes.');
+          }
+        });
+      } else {
+        console.log('Permissão para notificações já concedida:', Notification.permission);
+      }
+    }
+    window.addEventListener('load', requestNotificationPermission);
+  </script>
+</head>
+<body>
+<script src="main.dart.js" type="application/javascript"></script>
+</body>
+</html>
