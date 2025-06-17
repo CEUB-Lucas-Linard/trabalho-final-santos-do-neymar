@@ -1,6 +1,6 @@
 # EventApp
 
-EventApp é um aplicativo Flutter para gerenciamento de eventos, desenvolvido como projeto acadêmico. Ele permite criar, visualizar e gerenciar eventos em um calendário interativo, com suporte a notificações locais e eventos recorrentes. Este documento descreve os requisitos solicitados, a implementação realizada e as funcionalidades adicionais incluídas.
+EventApp é um aplicativo Flutter para gerenciamento de eventos, desenvolvido como projeto acadêmico. Ele permite criar, visualizar e gerenciar eventos em um calendário interativo, com suporte a notificações locais avançadas, eventos recorrentes e uma interface para monitoramento de notificações próximas. Este documento descreve os requisitos solicitados, a implementação realizada e as funcionalidades adicionais incluídas.
 
 ## Requisitos Solicitados
 
@@ -33,7 +33,7 @@ O EventApp foi desenvolvido em Flutter, utilizando pacotes externos para funcion
   - Configurado em `_buildCalendarView` com personalização de cores e estilos.
 - **Lista de Eventos:**
   - Na aba *Calendário*, uma lista dinâmica (`ListView.builder`) exibe eventos do dia selecionado em cartões estilizados com título, horário, local e ícones por categoria (ex.: roxo para Reunião).
-  - Na aba *Agenda*, `_buildAgendaView` lista eventos em ordem cronológica, agrupados por data (ex.: "Almoço com parceiros" em 19 de junho).
+  - Na aba *Agenda*, `_buildAgendaView` lista eventos em ordem cronológica, agrupados por data (ex.: "Aniversário de Ana" em 19 de junho).
   - Cartões utilizam `Card` com sombras, cores personalizadas e layout via `Column` e `Row`.
 - **Widgets de Entrada:**
   - Modal de criação de eventos (`_showAddEventDialog`) inclui:
@@ -45,15 +45,16 @@ O EventApp foi desenvolvido em Flutter, utilizando pacotes externos para funcion
 
 ### 2. Notificações Locais
 - **Implementação:**
-  - Pacote `flutter_local_notifications` usado para agendar notificações locais 15 minutos antes de cada evento.
-  - Método `_scheduleNotification` configura notificações com título (ex.: "Lembrete: Consulta médica") e horário, suportando eventos únicos e recorrentes (até 100 ocorrências).
-  - Inicializado no `main` com `AndroidInitializationSettings` para Android.
+  - Pacote `awesome_notifications` usado para agendar notificações locais 15 minutos antes de cada evento, com suporte a som, vibração e compatibilidade com web.
+  - Método `_scheduleNotification` configura notificações com título (ex.: "Lembrete: Evento de Teste") e horário, suportando eventos únicos e recorrentes (até 100 ocorrências).
+  - Verificação de permissões de notificação, com solicitação ao usuário se necessário.
+  - Inicializado no `main` com configurações específicas para Android e web.
 - **Exemplo:**
-  - Um evento como "Consulta médica" às 21:00 em 17 de junho gera uma notificação às 20:45.
+  - Um evento como "Evento de Teste" às 21:09 em 16 de junho gera uma notificação às 20:54.
 
 ### 3. Funcionalidades Sugeridas
 - **Cadastrar Eventos com Data, Hora e Local:**
-  - Modal de criação permite inserir data/hora de início e fim, local (ex.: "Clínica Central"), título, descrição, categoria e recorrência.
+  - Modal de criação permite inserir data/hora de início e fim, local (ex.: "Online"), título, descrição, categoria e recorrência.
   - Método `_saveEvent` valida e adiciona o evento ao mapa `_events`, com suporte a recorrência via `_addRecurringEvents`.
 - **Exibir Calendário Mensal e Lista dos Próximos Eventos:**
   - Calendário mensal na aba *Calendário* com `table_calendar`.
@@ -63,21 +64,26 @@ O EventApp foi desenvolvido em Flutter, utilizando pacotes externos para funcion
 
 ## Funcionalidades Extras
 
-Além dos requisitos, implementamos:
+Além dos requisitos, foram implementadas:
 - **Eventos Recorrentes:**
   - Suporte a eventos diários, semanais, mensais e anuais, com data de término configurável.
-  - Método `_addRecurringEvents` calcula ocorrências futuras (ex.: reunião semanal até 30 de junho de 2025), limitadas a 100 para desempenho.
+  - Método `_addRecurringEvents` calcula ocorrências futuras (ex.: aniversário anual até 30 de junho de 2027), limitadas a 100 para desempenho.
 - **Categorias Personalizadas:**
   - Categorias (Reunião, Pessoal, Trabalho, Viagem, Aniversário, Outro) com cores e ícones distintos (ex.: roxo para Reunião, verde para Pessoal).
   - Seleção no modal de criação com botões visuais.
 - **Detalhes e Exclusão de Eventos:**
   - Modal (`showModalBottomSheet`) exibe detalhes completos (horário, local, categoria, descrição, participantes).
-  - Opção de excluir eventos, removendo-os do mapa `_events` e cancelando notificações.
+  - Opção de excluir eventos, removendo-os do mapa `_events` e cancelando notificações associadas, incluindo recorrências.
+- **Aba de Notificações:**
+  - Nova aba *Notificações* exibe eventos com notificações próximas (dentro de 15 minutos), atualizada a cada 30 segundos via `Timer`.
+  - Permite testar notificações manuais e excluir notificações individualmente.
 - **Tema Visual Personalizado:**
   - Tema Material Design com paleta de cores (roxo, laranja, verde) em `ThemeData`.
   - Animações suaves para transições (ex.: abertura do modal).
 - **Suporte a Participantes:**
   - Eventos podem incluir lista estática de participantes, com potencial para expansão.
+- **Compatibilidade com Web:**
+  - Configurações de notificações adaptadas para plataformas web, desativando recursos como vibração e LED.
 
 ## Estado Atual e Persistência
 
@@ -92,7 +98,8 @@ Além dos requisitos, implementamos:
 
 ### Pré-requisitos
 - Flutter SDK (versão 3.x recomendada).
-- Dispositivo/emulador Android ou iOS.
+- Dispositivo/emulador Android, iOS ou navegador (para suporte web).
+- Adicione o arquivo de som `res_notification.raw` ao diretório `android/app/src/main/res/raw` para notificações personalizadas no Android.
 
 ### Instalação
 ```bash
